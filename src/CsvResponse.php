@@ -14,9 +14,9 @@ use Nette\Http\IResponse;
 class CsvResponse implements NetteAppIReseponse
 {
 
-	const SEPARATOR_COMMA = ',';
-	const SEPARATOR_SEMICOLON = ';';
-	const SEPARATOR_TAB = '	';
+	public const SEPARATOR_COMMA = ',';
+	public const SEPARATOR_SEMICOLON = ';';
+	public const SEPARATOR_TAB = '	';
 
 	/**
 	 * @var IDataSource
@@ -29,15 +29,22 @@ class CsvResponse implements NetteAppIReseponse
 	private $glue = self::SEPARATOR_SEMICOLON;
 
 	/**
+	 * @var array
+	 */
+	private $header = [];
+
+	/**
 	 * @var string
 	 */
 	private $outputFilename;
 
 
-	public function __construct(IDataSource $dataSource, string $filename = 'output.csv')
-	{
+	public function __construct(
+		IDataSource $dataSource,
+		string $outputFilename = 'output.csv'
+	) {
 		$this->dataSource = $dataSource;
-		$this->outputFilename = $filename;
+		$this->outputFilename = $outputFilename;
 	}
 
 
@@ -55,6 +62,13 @@ class CsvResponse implements NetteAppIReseponse
 	public function getGlue(): string
 	{
 		return $this->glue;
+	}
+
+
+	public function setHeader(array $header): CsvResponse
+	{
+		$this->header = $header;
+		return $this;
 	}
 
 
@@ -76,7 +90,7 @@ class CsvResponse implements NetteAppIReseponse
 		$httpResponse->setContentType('text/csv', 'utf-8');
 		$httpResponse->setHeader('Content-Disposition', 'attachment; filename="' . $this->outputFilename . '"');
 
-		$acceptEncoding = $httpRequest->getHeader('Accept-Encoding');
+		$acceptEncoding = $httpRequest->getHeader('Accept-Encoding', '');
 		$supportsGzip = stripos($acceptEncoding, 'gzip' ) !== FALSE;
 		if ($supportsGzip) {
 			$httpResponse->setHeader('Content-Encoding', 'gzip');
@@ -88,6 +102,10 @@ class CsvResponse implements NetteAppIReseponse
 			throw new Exception(sprintf('%s: error create buffer!', __CLASS__));
 		}
 		fputs($buffer, $this->getUtf8BomBytes());
+
+		if (count($this->header)) {
+			fputcsv($buffer, $this->header, $this->glue);
+		}
 
 		$count = 1;
 		while (($row = $this->dataSource->next()) !== NULL) {

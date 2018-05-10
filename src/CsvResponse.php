@@ -19,6 +19,11 @@ class CsvResponse implements NetteAppIReseponse
 	public const SEPARATOR_TAB = '	';
 
 	/**
+	 * @var callable[]
+	 */
+	private $columnsCallbacks = [];
+
+	/**
 	 * @var IDataSource
 	 */
 	private $dataSource;
@@ -45,6 +50,20 @@ class CsvResponse implements NetteAppIReseponse
 	) {
 		$this->dataSource = $dataSource;
 		$this->outputFilename = $outputFilename;
+	}
+
+
+	/**
+	 * @param mixed $column
+	 * @param callable $callback
+	 */
+	public function addColumnCallback($column, callable $callback): void
+	{
+		if (isset($this->columnsCallbacks[$column])) {
+			throw new InvalidArgumentException(sprintf('%s: column "%s" callback exists!', __CLASS__, $column));
+		}
+
+		$this->columnsCallbacks[$column] = $callback;
 	}
 
 
@@ -109,6 +128,13 @@ class CsvResponse implements NetteAppIReseponse
 
 		$count = 1;
 		while (($row = $this->dataSource->next()) !== NULL) {
+			foreach ($this->columnsCallbacks as $column => $callback) {
+				if ( ! isset($row[$column])) {
+					continue;
+				}
+				$row[$column] = $callback($row[$column]);
+			}
+
 			fputcsv($buffer, $row, $this->glue);
 			if ($count % 1000 === 0) {
 				if ($supportsGzip) {

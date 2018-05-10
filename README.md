@@ -27,9 +27,9 @@ class CsvExporter implements IDataSource
 	 * @var array
 	 */
 	private $data = [
-		['honza', '2016-01-01'],
-		['pepa', '2016-01-02'],
-		['david', '2016-01-03']
+		['name' => 'honza', 'date' => '2016-01-01', 'score' => 1],
+		['name' => 'pepa', 'date' => '2016-01-02', 'score' => 2],
+		['name' => 'david', 'date' => '2016-01-03', 'score' => 3]
 	];
 
 	/**
@@ -55,6 +55,7 @@ Presenter
 public function actionExportCsv(int $id): void
 {
 	$response = new CsvResponse($this->csvExporter, sprintf('export-%d.csv', $id));
+	$response->addColumnCallback('score', [$this, 'myScoreFormatCallback']);
 	$this->sendResponse($response);
 }
 ```
